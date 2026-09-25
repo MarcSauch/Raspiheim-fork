@@ -1,4 +1,4 @@
-FROM debian@sha256:914261d1145adceace843aa24efcc339f5ce4f570a192dad4bd2d31241fbeb7d
+FROM debian@sha256:da496358bd6934d2bd6a563a33176a2e50eff5490c54b4ac6fb051b69fef4071
 
 
 #Install Prereqs
@@ -33,7 +33,7 @@ RUN echo "" >> /etc/box64.box64rc \
 # Install Steam
 RUN mkdir   /steamcmd \
 &&  cd      /steamcmd \
-&&  curl -sqL "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz" | tar zxvf -
+&&  curl --fail --silent --show-error --location "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz" | tar zxvf -
 
 # Install required library and scripts
 COPY ./add /scripts/

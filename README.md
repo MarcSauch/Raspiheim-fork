@@ -1,7 +1,12 @@
 Minimum Requirements:
 - Raspberry Pi 4
-- 4GB RAM
+- 8GB RAM recommended (4GB minimum)
 - 64-bit OS
+
+The image uses the current Debian trixie-slim arm64 base. SteamCMD is downloaded
+from Valve during the image build, and the Valheim Dedicated Server (Steam app
+896660) is updated to the latest available build when the container starts with
+`UPDATE=enabled` (the default).
 
 Important for Pi5-Users!
 Due to a different pagesize (16k vs. 4k), the container won't work with the Pi5 out of the box until box86/64 accounts for the increased pagesize.
