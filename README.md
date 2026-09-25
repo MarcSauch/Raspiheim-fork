@@ -91,6 +91,23 @@ Starting the server takes about 15-30 (Raspi4) minutes each time, so be patient!
 
 Place your Save-Worlds in /path/to/valheim/data/worlds_local/
 
+SteamCMD and Storage
+
+SteamCMD is bootstrapped during the image build. At startup, the script refreshes
+the Valheim app metadata before running the update, then uses a writable runtime
+copy under `/data/steamcmd`. This is required when the container is run with a
+read-only root filesystem, such as Pelican's default configuration.
+
+Keep both mount destinations exactly as shown:
+
+- `/data` stores SteamCMD's runtime files, logs, and world data.
+- `/valheim` stores the downloaded server files.
+
+The `/valheim` volume must be writable and have at least 3 GiB of free space.
+The current Valheim server download is approximately 1.9 GiB and expands to
+more than 2 GiB. A mount named `/valhiem` will not work because it is a different
+path.
+
 Known Issues:
 Common:
 - If the save-file approaches 100MB and has insufficient RAM/Storage-speed, disconnects may occur when the server tries to handle saving and RAM-organisation. This is, as far as I can tell, something for the valheim-devs to fix.
@@ -106,6 +123,8 @@ Aspirations:
 I've been requested to implement BepInEx-Support several times now and tried to do so, but as of now a certain library is causing trouble to BOX64.
 
 Changelog
+
+  - 1.4: SteamCMD is initialized during image build, refreshes Valheim app metadata before installation, and uses writable `/data/steamcmd` storage for read-only container filesystems. Added storage checks for the `/valheim` volume.
 
   - 1.3: Brought back full functionality. - Boot-time seems to be significantly increased while online performance has improved. - Crossplay enabled. - Further server-settings enabled. - 
             removed true/false flags. enabled/disabled and 1/0 will work universally. - As versioning of box86/64 has caused the most trouble throughout the lifetime of this container, I 

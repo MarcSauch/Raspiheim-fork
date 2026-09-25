@@ -6,8 +6,8 @@ RUN chmod 1777 /tmp \
 &&  dpkg --add-architecture armhf \
 &&  apt update -y \
 &&  apt upgrade -y \
-&&  apt install -y  apt-utils knockd unzip wget curl gpg systemd \
-                    libc6 libc6:armhf libatomic1 libatomic1:armhf libpulse-dev libpulse-dev:armhf libpulse0 libpulse0:armhf libmonoboehm-2.0-1 libmonoboehm-2.0-1:armhf
+&&  apt install -y  apt-utils ca-certificates knockd unzip wget curl gpg systemd \
+                    libc6 libc6:armhf libatomic1 libatomic1:armhf libcurl3t64-gnutls:armhf libpulse-dev libpulse-dev:armhf libpulse0 libpulse0:armhf libmonoboehm-2.0-1 libmonoboehm-2.0-1:armhf
 
 #Install Box86-Repo
 
@@ -33,7 +33,15 @@ RUN echo "" >> /etc/box64.box64rc \
 # Install Steam
 RUN mkdir   /steamcmd \
 &&  cd      /steamcmd \
-&&  curl --fail --silent --show-error --location "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz" | tar zxvf -
+&&  curl --fail --silent --show-error --location "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz" | tar zxvf - \
+&&  cd      /steamcmd \
+&&  for attempt in 1 2 3 4 5; do \
+        box86 ./linux32/steamcmd -tcp +quit && break; \
+        [ "$attempt" -lt 5 ] || exit 1; \
+        sleep 5; \
+    done \
+&&  mkdir -p /valheim /data \
+&&  chmod -R a+rwX /steamcmd /valheim /data
 
 # Install required library and scripts
 COPY ./add /scripts/
@@ -50,7 +58,8 @@ ENV SERVER_NAME=Raspiheim \
     SAVE_INTERVAL=1800 \
     CROSSPLAY=disabled \
     BOX86=default \
-    BOX64=default
+    BOX64=default \
+    HOME=/steamcmd
 
 EXPOSE 2456/udp 2457/udp
 

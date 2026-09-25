@@ -1,8 +1,7 @@
 #!/bin/bash
 export PATH=/usr/local/bin/:$PATH
-cp /etc/resolv.conf /
-sed -i s/"nameserver ".*/"nameserver 1.1.1.1"/g /resolv.conf
-cp /resolv.conf /etc/resolv.conf
+
+mkdir -p /data/logs /data/worlds_local
 
 #Manage Box86/64 version
 if [ "$BOX86" != "default" ];
@@ -29,17 +28,65 @@ then	installed="$(apt-cache policy box64-rpi4arm64 | grep Installed | awk '{prin
 	fi;
 fi;
 
-# Upgrade Valheim to latest Version
-if [ ! -f /valheim/start_server.sh ] || [ $UPDATE = enabled ] || [ $UPDATE = 1 ]; then
-cd /steamcmd
-echo "Updating the server..."
-export LD_LIBRARY_PATH="/steamcmd/linux32:$LD_LIBRARY_PATH" && \
-box86 ./linux32/steamcmd +login anonymous +quit >/dev/null;
-export LD_LIBRARY_PATH="/steamcmd/linux32:$LD_LIBRARY_PATH" && \
-box86 ./linux32/steamcmd +login anonymous +quit >/dev/null;
-export LD_LIBRARY_PATH="/steamcmd/linux32:$LD_LIBRARY_PATH" && \
-box86 ./linux32/steamcmd +@sSteamCmdForcePlatformType linux +force_install_dir /valheim +login anonymous +app_update 896660 validate +quit;
-fi;
+if [ ! -f /valheim/start_server.sh ] || [ "$UPDATE" = "enabled" ] || [ "$UPDATE" = "1" ]; then
+
+	steamcmd_dir=/data/steamcmd
+	if [ ! -x "$steamcmd_dir/linux32/steamcmd" ]; then
+		echo "Copying SteamCMD to $steamcmd_dir..."
+		mkdir -p "$steamcmd_dir"
+		cp -a /steamcmd/. "$steamcmd_dir/"
+	fi
+	cd "$steamcmd_dir"
+	if [ ! -d /valheim ]; then
+		echo "Creating /valheim directory..."
+		mkdir -p /valheim
+	fi
+    echo "Updating the server..."
+
+	if ! touch /valheim/.write-test 2>/dev/null; then
+		echo "Valheim installation failed: /valheim is not writable"
+		exit 1
+	fi
+	rm -f /valheim/.write-test
+	available_kb=$(df -Pk /valheim | awk 'NR == 2 { print $4 }')
+	if [ -z "$available_kb" ] || [ "$available_kb" -lt 3145728 ]; then
+		echo "Valheim installation failed: /valheim needs at least 3 GiB free"
+		exit 1
+	fi
+
+	export HOME="$steamcmd_dir"
+	export LD_LIBRARY_PATH="$steamcmd_dir/linux32:$LD_LIBRARY_PATH"
+	echo "Starting Valheim installation process..."
+	installed=0
+	for attempt in 1 2 3 4 5; do
+		echo "Valheim installation attempt $attempt/5..."
+		box86 ./linux32/steamcmd -nobootstrapupdate -tcp \
+		+@sSteamCmdForcePlatformType linux \
+		+force_install_dir /valheim \
+		+login anonymous \
+		+app_info_update 1 \
+		+app_info_print 896660 \
+		+app_update 896660 validate \
+		+quit
+
+		if [ -x /valheim/valheim_server.x86_64 ]; then
+			installed=1
+			break
+		fi
+
+		[ "$attempt" -lt 5 ] && sleep 5
+	done
+
+	if [ "$installed" -ne 1 ]; then
+		echo "Valheim installation did not complete after 5 attempts"
+	fi
+
+fi
+
+if [ ! -x /valheim/valheim_server.x86_64 ]; then
+echo "Valheim installation failed: /valheim/valheim_server.x86_64 is missing"
+exit 1
+fi
 
 # Manage Persistency
 cp -f /scripts/start_server.sh.tpl	/valheim/start_server.sh
